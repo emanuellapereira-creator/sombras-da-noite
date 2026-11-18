@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo da Memória - Frutas</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', sans-serif;
+      background-color: #ffeaa7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+      margin: 0;
+    }
+
+    h1 {
+      color: #d63031;
+    }
+
+    .menu {
+      margin: 20px;
+    }
+
+    .info {
+      margin: 10px;
+      font-size: 18px;
+      color: #2d3436;
+    }
+
+    .tabuleiro {
+      display: grid;
+      grid-template-columns: repeat(4, 100px);
+      grid-gap: 15px;
+    }
+
+    .carta {
+      width: 100px;
+      height: 100px;
+      background-color: #74b9ff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .carta.virada {
+      background-color: #ffeaa7;
+      transform: rotateY(180deg);
+    }
+
+    .ranking {
+      margin-top: 20px;
+      font-size: 16px;
+      color: #2d3436;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🍉 Jogo da Memória - Frutas 🍓</h1>
+
+  <div class="menu">
+    Jogadores:
+    <input type="text" id="jogador1" placeholder="Jogador 1">
+    <input type="text" id="jogador2" placeholder="Jogador 2">
+    <button onclick="iniciarJogo()">Iniciar</button>
+  </div>
+
+  <div class="info">
+    <span id="nivel">Nível: 1</span> |
+    <span id="tempo">Tempo: 60</span>s |
+    <span id="turno">Turno: Jogador 1</span>
+  </div>
+
+  <div class="tabuleiro" id="tabuleiro"></div>
+
+  <div class="ranking" id="ranking"></div>
+
+  <script>
+    const frutasBase = ['🍎', '🍌', '🍓', '🍉', '🍍', '🍒', '🍇', '🍋', '🥝', '🍑', '🍐', '🥥'];
+    let nivel = 1;
+    let tempo = 60;
+    let timer;
+    let primeiraCarta = null;
+    let bloqueio = false;
+    let jogadores = [];
+    let pontuacao = [0, 0];
+    let turno = 0;
+
+    function iniciarJogo() {
+      const nome1 = document.getElementById('jogador1').value || "Jogador 1";
+      const nome2 = document.getElementById('jogador2').value || "Jogador 2";
+      jogadores = [nome1, nome2];
+      pontuacao = [0, 0];
+      turno = 0;
+      nivel = 1;
+      montarTabuleiro();
+    }
+
+    function montarTabuleiro() {
+      document.getElementById('nivel').textContent = "Nível: " + nivel;
+      document.getElementById('tempo').textContent = "Tempo: " + tempo;
+      document.getElementById('turno').textContent = "Turno: " + jogadores[turno];
+      const tabuleiro = document.getElementById('tabuleiro');
+      tabuleiro.innerHTML = "";
+
+      const frutas = frutasBase.slice(0, 4 + nivel);
+      let cartas = [...frutas, ...frutas];
+      cartas.sort(() => Math.random() - 0.5);
+
+      cartas.forEach(fruta => {
+        const carta = document.createElement('div');
+        carta.classList.add('carta');
+        carta.dataset.fruta = fruta;
+        carta.addEventListener('click', virarCarta);
+        tabuleiro.appendChild(carta);
+      });
+
+      iniciarTimer();
+      atualizarRanking();
+    }
+
+    function iniciarTimer() {
+      clearInterval(timer);
+      tempo = 60;
+      document.getElementById('tempo').textContent = "Tempo: " + tempo;
+      timer = setInterval(() => {
+        tempo--;
+        document.getElementById('tempo').textContent = "Tempo: " + tempo;
+        if (tempo <= 0) {
+          clearInterval(timer);
+          alert("⏰ Tempo esgotado! Fim da rodada.");
+          mostrarRankingFinal();
+        }
+      }, 1000);
+    }
+
+    function virarCarta() {
+      if (bloqueio || this.classList.contains('virada')) return;
+      this.textContent = this.dataset.fruta;
+      this.classList.add('virada');
+
+      if (!primeiraCarta) {
+        primeiraCarta = this;
+      } else {
+        if (this.dataset.fruta === primeiraCarta.dataset.fruta) {
+          pontuacao[turno] += 10;
+          primeiraCarta = null;
+          atualizarRanking();
+          verificarVitoria();
+        } else {
+          bloqueio = true;
+          setTimeout(() => {
+            this.textContent = '';
+            primeiraCarta.textContent = '';
+            this.classList.remove('virada');
+            primeiraCarta.classList.remove('virada');
+            primeiraCarta = null;
+            bloqueio = false;
+            turno = (turno + 1) % jogadores.length;
+            document.getElementById('turno').textContent = "Turno: " + jogadores[turno];
+          }, 800);
+        }
+      }
+    }
+
+    function verificarVitoria() {
+      const cartas = document.querySelectorAll('.carta');
+      const todasViradas = [...cartas].every(c => c.classList.contains('virada'));
+      if (todasViradas) {
+        clearInterval(timer);
+        alert("🎉 Fase concluída! Avançando para o nível " + (nivel + 1));
+        nivel++;
+        montarTabuleiro();
+      }
+    }
+
+    function atualizarRanking() {
+      const rankingDiv = document.getElementById('ranking');
+      rankingDiv.innerHTML = `
+        🏆 Ranking <br>
+        ${jogadores[0]}: ${pontuacao[0]} pontos <br>
+        ${jogadores[1]}: ${pontuacao[1]} pontos
+      `;
+    }
+
+    function mostrarRankingFinal() {
+      alert("🏁 Fim do jogo!\n" +
+        jogadores[0] + ": " + pontuacao[0] + " pontos\n" +
+        jogadores[1] + ": " + pontuacao[1] + " pontos");
+    }
+  </script>
+</body>
+
+</html>
